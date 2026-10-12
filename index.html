@@ -113,7 +113,7 @@ select{padding:7px;border:1px solid var(--line);border-radius:8px;background:var
 <label>Activity<select id="fAct"><option value="0">Sedentary (desk, little exercise)</option><option value="1">Light (1–3 days/wk)</option><option value="2">Moderate (3–5 days/wk)</option><option value="3">Active (6–7 days/wk)</option><option value="4">Very active (hard daily / physical job)</option></select></label>
 <label>Goal<select id="fGoal"><option value="lose">Lose weight</option><option value="maintain">Maintain</option><option value="gain">Gain muscle</option></select></label>
 </div><div class="why" id="pWhy"></div>
-<div class="row" style="margin-top:12px;justify-content:flex-end"><button id="pSave">Save & apply targets</button></div></section>
+<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="chk" id="pRecalc" type="button">↻ Recalculate from my profile</button><button id="pSave">Save & apply targets</button></div></section>
 <section data-tab="today" class="wide"><h2>Schedule</h2><p class="hint">Today's time blocks. Click text to edit; current block is highlighted.</p>
 <button id="notif" class="chk">🔔 Enable reminders</button>
 <ul id="sched" style="margin-top:8px"></ul>
@@ -156,12 +156,28 @@ function load(){let d;try{d=JSON.parse(localStorage.getItem(dataKey(P.active)))}
 const save=()=>{localStorage.setItem(dataKey(P.active),JSON.stringify(S));localStorage.setItem(PK,JSON.stringify(P))};
 load();
 // ---- recommendations
+/*CALC-START*/
 const ACT=[1.2,1.375,1.55,1.725,1.9],ACTN=['sedentary','light','moderate','active','very active'],GADJ={lose:-500,maintain:0,gain:300};
-function rec(pr=S.profile){if(!pr||!pr.wkg||!pr.hcm||!pr.age)return{kcal:2200,p:150,c:220,f:70,water:3.0,why:'Defaults shown — fill in your profile for personalised targets.'};
- const w=+pr.wkg,h=+pr.hcm,a=+pr.age,sx=pr.sex==='m'?5:pr.sex==='f'?-161:-78,bmr=10*w+6.25*h-5*a+sx,tdee=bmr*ACT[pr.act],kcal=Math.round((tdee+GADJ[pr.goal])/10)*10;
- const pk=pr.goal==='lose'?2.2:1.8,p=Math.round(pk*w),fp=pr.goal==='lose'?.25:.28,f=Math.round(kcal*fp/9),c=Math.max(0,Math.round((kcal-4*p-9*f)/4));
- const water=r1(w*.035+(pr.act>=3?.5:0));
- return{kcal,p,c,f,water,why:`BMR (Mifflin-St Jeor) ≈ ${Math.round(bmr)} kcal · × ${ACT[pr.act]} for ${ACTN[pr.act]} activity = TDEE ≈ ${Math.round(tdee)} kcal · ${GADJ[pr.goal]>=0?'+':''}${GADJ[pr.goal]} for “${pr.goal}” → <b>${kcal} kcal</b>.<br>Protein ${pk} g/kg → <b>${p} g</b> · fat ${fp*100}% of kcal → <b>${f} g</b> · carbs = remainder → <b>${c} g</b>.<br>Water 35 ml/kg${pr.act>=3?' + 0.5 L for high activity':''} → <b>${water} L</b>.`}}
+const LB=2.20462,r2=x=>Math.round(x*100)/100,clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const ftInToCm=(ft,inch)=>((+ft||0)*12+(+inch||0))*2.54, lbToKg=lb=>(+lb||0)/LB, kgToLb=kg=>kg*LB;
+function cmToFtIn(cm){const ti=Math.round(cm/2.54*10)/10;let ft=Math.floor(ti/12),inch=Math.round((ti-ft*12)*10)/10;if(inch>=12){ft++;inch=0}return[ft,inch]}
+function validProfile(pr){const e=[];if(!(pr.age>=13&&pr.age<=100))e.push('age 13–100');if(!(pr.hcm>=120&&pr.hcm<=230))e.push('height 120–230 cm (3′11″–7′7″)');if(!(pr.wkg>=30&&pr.wkg<=300))e.push('weight 30–300 kg (66–660 lb)');return e}
+function calcTargets(pr){if(!pr||!(+pr.wkg)||!(+pr.hcm)||!(+pr.age))return{kcal:2200,p:150,c:220,f:70,water:3.0,why:'Defaults shown — fill in your profile for personalised targets.'};
+ const w=+pr.wkg,h=+pr.hcm,a=+pr.age,act=clamp(Math.round(+pr.act||0),0,4),goal=GADJ[pr.goal]!==undefined?pr.goal:'maintain';
+ const sx=pr.sex==='m'?5:pr.sex==='f'?-161:-78,bmr=10*w+6.25*h-5*a+sx,tdee=bmr*ACT[act],kcal=Math.round((tdee+GADJ[goal])/10)*10;
+ const bmi=w/((h/100)**2),refKg=bmi>27?25*(h/100)**2:w;           // heavier bodies: protein from weight at BMI 25
+ const pk={lose:2.0,maintain:1.8,gain:2.0}[goal],p=Math.round(Math.min(pk*refKg,kgToLb(w)));  // never above 1 g per lb
+ const fp=goal==='lose'?.25:.28,f=Math.round(kcal*fp/9),c=Math.max(0,Math.round((kcal-4*p-9*f)/4));
+ const rawW=w*.035+(act>=3?.5:0),water=Math.round(clamp(rawW,2.5,4.5)*10)/10;
+ const sexN={m:'male',f:'female'}[pr.sex]||'other (avg of M/F)',[ft,inch]=cmToFtIn(h);
+ const why=`<b>Inputs used:</b> ${a} y · ${sexN} · ${h.toFixed(2)} cm (${ft}′${inch}″) · ${w.toFixed(2)} kg (${kgToLb(w).toFixed(1)} lb) · BMI ${bmi.toFixed(1)} · ${ACTN[act]} · ${goal}<br>`+
+  `BMR = 10×${w.toFixed(2)} + 6.25×${h.toFixed(2)} − 5×${a} ${sx>=0?'+':'−'} ${Math.abs(sx)} = <b>${Math.round(bmr)} kcal</b> (Mifflin-St Jeor)<br>`+
+  `TDEE = ${Math.round(bmr)} × ${ACT[act]} = ${Math.round(tdee)} · ${GADJ[goal]>=0?'+':''}${GADJ[goal]} for ${goal} → <b>${kcal} kcal</b><br>`+
+  `Protein ${pk} g/kg × ${refKg.toFixed(1)} kg${refKg<w?' (weight at BMI 25)':''}${pk*refKg>kgToLb(w)?', capped at 1 g/lb':''} → <b>${p} g</b> · Fat ${Math.round(fp*100)}% of kcal → <b>${f} g</b> · Carbs = (${kcal} − 4×${p} − 9×${f}) ÷ 4 → <b>${c} g</b><br>`+
+  `Water 35 ml × ${w.toFixed(2)} kg${act>=3?' + 0.5 L (high activity)':''} = ${rawW.toFixed(2)} L${rawW<2.5||rawW>4.5?' → clamped to 2.5–4.5':''} → <b>${water} L</b>`;
+ return{kcal,p,c,f,water,bmr:Math.round(bmr),tdee:Math.round(tdee),why}}
+/*CALC-END*/
+function rec(pr=S.profile){return calcTargets(pr)}
 const T=()=>{const r=rec();const o={};['kcal','p','c','f','water'].forEach(k=>o[k]=S.over[k]??r[k]);return o};
 // ---- derived
 const waterMl=d=>(S.water[d]||[]).reduce((a,x)=>a+x.ml,0);
@@ -263,21 +279,27 @@ function renderProgress(){const h=$('heat');h.innerHTML='';const end=new Date(),
  $('wiTime').value=S.weighin.time;const imp=S.profile?.units==='imperial';$('wiUnit').textContent=imp?'lb':'kg';
  $('wiHist').innerHTML=S.weights.slice().reverse().slice(0,10).map(w=>`<li><span style="flex:1">${w.date}</span><b>${imp?r1(w.kg*2.20462)+' lb':r1(w.kg)+' kg'}</b></li>`).join('')||'<li class="sub">No weigh-ins yet.</li>'}
 $('wiDay').onchange=e=>{S.weighin.dow=+e.target.value;save();render()};$('wiTime').onchange=e=>{S.weighin.time=e.target.value;save();render()};
-$('wiForm').onsubmit=e=>{e.preventDefault();let v=+$('wiVal').value;if(!v)return;if(S.profile?.units==='imperial')v/=2.20462;const t=today();S.weights=S.weights.filter(w=>w.date!==t);S.weights.push({date:t,kg:r1(v)});
+$('wiForm').onsubmit=e=>{e.preventDefault();let v=+$('wiVal').value;if(!v)return;if(S.profile?.units==='imperial')v=lbToKg(v);const t=today();S.weights=S.weights.filter(w=>w.date!==t);S.weights.push({date:t,kg:r1(v)});
  S.weights.sort((a,b)=>a.date.localeCompare(b.date));if(S.profile)S.profile.wkg=r1(v);e.target.reset();save();render()};
 const weighDue=()=>new Date().getDay()==S.weighin.dow&&nowM()>=hm2m(S.weighin.time)&&!S.weights.some(w=>w.date===today());
 // ---- profile
 function fillProfile(){const pr=S.profile||{units:'metric',sex:'m',act:2,goal:'maintain'};$('pSwitch').innerHTML=P.list.map(p=>`<option value="${p.id}" ${p.id===P.active?'selected':''}>${esc(p.name)}</option>`).join('');
- $('fName').value=P.list.find(p=>p.id===P.active).name;$('fUnits').value=pr.units;$('fAge').value=pr.age||'';$('fSex').value=pr.sex;$('fAct').value=pr.act;$('fGoal').value=pr.goal;unitUI(pr)}
+ $('fName').value=P.list.find(p=>p.id===P.active).name;$('fUnits').value=pr.units;$('fAge').value=pr.age||'';$('fSex').value=pr.sex;$('fAct').value=pr.act;$('fGoal').value=pr.goal;curUnits=pr.units;unitUI(pr)}
 function unitUI(pr){const imp=$('fUnits').value==='imperial';$('hMet').style.display=imp?'none':'';$('hImp').style.display=imp?'':'none';$('wLbl').textContent=imp?'Weight (lb)':'Weight (kg)';
- if(pr){if(pr.hcm){const ti=pr.hcm/2.54;$('fHcm').value=pr.hcm;$('fFt').value=Math.floor(ti/12);$('fIn').value=r1(ti%12)}else{$('fHcm').value=$('fFt').value=$('fIn').value=''}$('fW').value=pr.wkg?(imp?r1(pr.wkg*2.20462):pr.wkg):''}previewWhy()}
-function readProfile(){const imp=$('fUnits').value==='imperial',hcm=imp?r1(((+$('fFt').value||0)*12+(+$('fIn').value||0))*2.54):+$('fHcm').value,w=+$('fW').value;
- return{units:imp?'imperial':'metric',age:+$('fAge').value,sex:$('fSex').value,hcm,wkg:imp?r1(w/2.20462):w,act:+$('fAct').value,goal:$('fGoal').value}}
-function previewWhy(){$('pWhy').innerHTML=rec(readProfile()).why}
-['fAge','fSex','fHcm','fFt','fIn','fW','fAct','fGoal'].forEach(id=>$(id).addEventListener('input',previewWhy));
-$('fUnits').onchange=()=>{const old=$('fUnits').value==='imperial'?'metric':'imperial';const imp=old==='imperial';const hcm=imp?r1(((+$('fFt').value||0)*12+(+$('fIn').value||0))*2.54):+$('fHcm').value,w=+$('fW').value;
- unitUI({hcm,wkg:w?(imp?r1(w/2.20462):w):0})};
-$('pSave').onclick=()=>{const pr=readProfile();if(!pr.age||!pr.hcm||!pr.wkg){alert('Please fill in age, height and weight.');return}S.profile=pr;P.list.find(p=>p.id===P.active).name=$('fName').value.trim()||'Me';save();render();go('today')};
+ if(pr){if(pr.hcm){const[ft,inch]=cmToFtIn(pr.hcm);$('fHcm').value=r1(pr.hcm);$('fFt').value=ft;$('fIn').value=inch}else{$('fHcm').value=$('fFt').value=$('fIn').value=''}$('fW').value=pr.wkg?r1(imp?kgToLb(pr.wkg):pr.wkg):'';
+  Object.assign($('fW').dataset,{kg:pr.wkg||'',shown:$('fW').value});Object.assign($('fHcm').dataset,{cm:pr.hcm||'',shown:[$('fHcm').value,$('fFt').value,$('fIn').value].join('|')})}previewWhy()}
+// reads the form in whatever unit system is currently shown; always returns cm / kg
+function readProfile(imp=$('fUnits').value==='imperial'){let hcm=imp?ftInToCm($('fFt').value,$('fIn').value):+$('fHcm').value,w=+$('fW').value,wkg=imp?lbToKg(w):w;
+ // untouched fields keep their exact stored value (avoids rounding drift when toggling units)
+ const dw=$('fW').dataset,dh=$('fHcm').dataset;if(dw.kg&&$('fW').value===dw.shown)wkg=+dw.kg;if(dh.cm&&[$('fHcm').value,$('fFt').value,$('fIn').value].join('|')===dh.shown)hcm=+dh.cm;
+ return{units:$('fUnits').value,age:+$('fAge').value,sex:$('fSex').value,hcm:r2(hcm),wkg:r2(wkg),act:+$('fAct').value,goal:$('fGoal').value}}
+function previewWhy(){const pr=readProfile(),e=validProfile(pr),ov=Object.keys(S.over).length;
+ $('pWhy').innerHTML=(e.length&&(pr.age||pr.hcm||pr.wkg)?`<b style="color:#e5484d">Check: ${e.join(', ')}</b><br>`:'')+rec(pr).why+(ov?`<br><b>Note:</b> ${ov} manual override(s) active (${Object.keys(S.over).join(', ')}) — use “Recalculate from my profile” to clear.`:'')}
+['fAge','fSex','fHcm','fFt','fIn','fW','fAct','fGoal'].forEach(id=>{$(id).addEventListener('input',previewWhy);$(id).addEventListener('change',previewWhy)});
+let curUnits=null;
+$('fUnits').onchange=()=>{const pr=readProfile(curUnits==='imperial');curUnits=$('fUnits').value;unitUI(pr)};
+$('pSave').onclick=()=>{const pr=readProfile(),e=validProfile(pr);if(e.length){alert('Please check: '+e.join(', '));return}if(Object.keys(S.over).length&&confirm('You have manual target overrides ('+Object.keys(S.over).join(', ')+'). Clear them and use the new profile-based targets?'))S.over={};S.profile=pr;curUnits=pr.units;P.list.find(p=>p.id===P.active).name=$('fName').value.trim()||'Me';save();render();go('today')};
+$('pRecalc').onclick=()=>{const pr=readProfile(),e=validProfile(pr);if(e.length){alert('Please check: '+e.join(', '));return}S.profile=pr;S.over={};save();render();previewWhy()};
 $('pSwitch').onchange=e=>{save();P.active=e.target.value;load();save();boot()};
 $('pNew').onclick=()=>{const n=prompt('Name for the new profile?');if(!n)return;save();const id='p'+uid();P.list.push({id,name:n.trim()});P.active=id;S=migrate(seed());save();boot()};
 $('pDel').onclick=()=>{if(P.list.length<2){alert('This is the only profile.');return}const cur=P.list.find(p=>p.id===P.active);if(!confirm('Delete profile "'+cur.name+'" and all its data?'))return;
