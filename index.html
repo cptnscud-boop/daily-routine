@@ -21,7 +21,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
 button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit}
 button.ghost{background:none;color:var(--muted);padding:2px 6px}button.ghost:hover{color:#e5484d}
 button.chk{background:var(--accent2);color:var(--accent)}button.chk.on{background:var(--ok);color:#fff}
-form{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}input[type=text],input[type=time]{flex:1;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+form{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}input[type=text],input[type=date],input[type=time]{flex:1;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
 input[type=time]{flex:0 0 125px;padding:7px 6px}.sub{font-size:.8rem;color:var(--muted)}
 .dots{display:flex;gap:3px}.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}.dot.on{background:var(--ok)}
 .tabs{display:flex;gap:6px;margin-bottom:8px}.tabs button{background:var(--accent2);color:var(--accent)}.tabs button.act{background:var(--accent);color:#fff}
@@ -65,9 +65,15 @@ button{min-height:42px}button.ghost{min-width:40px}li{padding:9px 4px;min-height
 input[type=text],input[type=time],input[type=number],input[type=date],select{min-height:42px;font-size:16px}
 .chip{min-height:38px;display:inline-flex;align-items:center;border:0;cursor:pointer}
 .banner{background:var(--now);border-radius:12px;padding:10px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-main>section{min-width:0}#mName{flex:1 1 100%}#sTitle{flex:1 1 100%}#sched li{flex-wrap:wrap}#sched li .t{min-width:60%}
+main>section{min-width:0}#mName,#wiDate{flex:1 1 100%}#sTitle{flex:1 1 100%}#sched li{flex-wrap:wrap}#sched li .t{min-width:60%}
 select{padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
 #ringWrap{display:none}#ringWrap.show{display:block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}.stat{background:var(--bg);border-radius:10px;padding:8px;text-align:center}.stat b{display:block;font-size:1.1rem}.stat span{font-size:.72rem;color:var(--muted)}
+.chart svg{width:100%;height:auto;display:block}.chart .ln{fill:none;stroke:var(--muted);stroke-width:1.5;opacity:.6}.chart .ma{fill:none;stroke:var(--accent);stroke-width:3}.chart .pt{fill:var(--muted)}.chart text{fill:var(--muted);font-size:10px}.chart .gl{stroke:var(--ok);stroke-dasharray:4 4}
+.msgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.msgrid label{display:flex;flex-direction:column;font-size:.75rem;color:var(--muted)}.msgrid .num{width:100%;flex:none}.msgrid input[type=date],.msgrid button{grid-column:1/-1}
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}.ph{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:3/4;background:var(--line);cursor:pointer;border:3px solid transparent}.ph.sel{border-color:var(--accent)}
+.ph img{width:100%;height:100%;object-fit:cover}.ph span{position:absolute;left:0;right:0;bottom:0;font-size:.7rem;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65));padding:10px 4px 3px}.ph button{position:absolute;top:2px;right:2px;min-height:28px;min-width:28px;padding:0;background:rgba(0,0,0,.5);color:#fff;border-radius:50%}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:6px}.compare figure{margin:0}.compare img{width:100%;border-radius:10px}.compare figcaption{font-size:.75rem;color:var(--muted);text-align:center}
 </style></head><body>
 <header data-tab="today" id="hdr"><div class="top"><h1>Today</h1></div><div class="date" id="date"></div>
 <div class="hero"><div class="ring"><svg width="96" height="96"><circle class="bg" cx="48" cy="48" r="40"/><circle class="fg" id="ringFg" cx="48" cy="48" r="40" stroke-dasharray="251.3" stroke-dashoffset="251.3"/></svg><b id="ringPct">0%</b></div>
@@ -95,9 +101,22 @@ select{padding:7px;border:1px solid var(--line);border-radius:8px;background:var
 <ul id="meals" style="margin-top:8px"></ul>
 <details><summary>Daily targets</summary><div class="row" style="margin-top:6px" id="targets"></div></details>
 <details><summary>History</summary><ul id="mHist"></ul></details></section>
-<section data-tab="progress"><h2>⚖️ Weekly weigh-in</h2><p class="hint">Reminder shows on Today and as a notification.</p>
-<div class="row"><select id="wiDay"></select><input type="time" id="wiTime"></div>
-<form id="wiForm"><input class="num" id="wiVal" type="number" step="0.1" placeholder="weight" required style="flex:1"><span class="foot" id="wiUnit"></span><button>Log weight</button></form><ul id="wiHist"></ul></section>
+<section data-tab="progress"><h2>⚖️ Weight</h2><p class="hint">Log by date in your profile units. Latest entry syncs to your profile.</p>
+<div class="stats" id="wStats"></div>
+<div id="wChart" class="chart"></div>
+<form id="wiForm"><input type="date" id="wiDate"><input class="num" id="wiVal" type="number" step="0.1" placeholder="weight" required style="flex:1"><span class="foot" id="wiUnit"></span><button>Log</button></form>
+<div class="pb" style="margin-top:12px"><div class="lbl"><span>🎯 Goal <input class="num" id="goalW" type="number" step="0.1" placeholder="goal"> <span class="foot" id="goalUnit"></span></span><span id="goalTxt" class="foot"></span></div><div class="tr"><div id="goalBar" style="background:var(--ok)"></div></div></div>
+<details><summary>Weight history</summary><ul id="wiHist"></ul></details>
+<details><summary>Weekly weigh-in reminder</summary><p class="hint" style="margin-top:6px">Shows on Today and as a notification.</p><div class="row"><select id="wiDay"></select><input type="time" id="wiTime"></div>
+</details></section>
+<section data-tab="progress"><h2>📏 Measurements</h2><p class="hint">Optional — fill in any you track.</p>
+<form id="msForm" class="msgrid"><input type="date" id="msDate">
+<label>Waist<input class="num" data-m="waist" type="number" step="0.1"></label><label>Chest<input class="num" data-m="chest" type="number" step="0.1"></label><label>Hips<input class="num" data-m="hips" type="number" step="0.1"></label>
+<label>Arms<input class="num" data-m="arms" type="number" step="0.1"></label><label>Thighs<input class="num" data-m="thighs" type="number" step="0.1"></label><label>Body fat %<input class="num" data-m="bf" type="number" step="0.1"></label>
+<button>Save measurements</button></form><div id="msDelta" class="chips"></div><details><summary>Measurement history</summary><ul id="msHist"></ul></details></section>
+<section data-tab="progress"><h2>📸 Progress photos</h2><p class="hint">🔒 Stored only on this device (IndexedDB) — never uploaded.</p>
+<div class="row"><input type="date" id="phDate"><label class="chip" style="cursor:pointer">＋ Add photo<input type="file" id="phFile" accept="image/*" capture="environment" hidden></label></div>
+<div class="gallery" id="gallery"></div><p class="foot" id="phHint">Tap two photos to compare side by side.</p><div id="compare" class="compare"></div></section>
 <section data-tab="progress" class="wide"><h2>🔥 Perfect days</h2><p class="hint">A day counts when the morning checklist, all habits and the water goal are done. Last 12 weeks.</p><div class="heat" id="heat"></div>
 <p class="foot">Shade = how many of the 3 were done (morning · habits · water).</p></section>
 <section data-tab="profile" id="profile"><div class="top"><h2 id="pTitle">Profile</h2></div>
@@ -143,7 +162,7 @@ const seed=()=>({v:SEED_VERSION,day:today(),tab:'morning',
  habits:['Up at 6:00','Morning water','Stretch & core'].map(t=>({id:uid(),t,days:[]})),
  sched:[['06:00','06:10','Wake up + drink water'],['06:10','06:30','Stretch & core routine (~20 min)']].map(([s,e,t])=>({id:uid(),s,e,t})),notified:{}});
 function migrate(S){
- S.meals??={};S.water??={};S.foods??=seedFoods();S.over??={};S.mDone??={};S.cel??={};S.weights??=[];
+ S.meals??={};S.water??={};S.foods??=seedFoods();S.over??={};S.mDone??={};S.cel??={};S.weights??=[];S.meas??=[];S.goalKg??=null;
  S.weighin??={dow:1,time:'06:15'};S.wrem??={on:true,from:'06:00',to:'21:00',int:90};S.wremFired??={};
  S.foods.forEach(f=>{if(f.n==='Eggs & Buttered Sourdough Toast'&&f.items?.[0]!=='4 large eggs')Object.assign(f,{k:632,p:36,c:53.6,f:29.6,items:['4 large eggs','2 slices sourdough (100 g)','2 tsp butter (10 g)']})});
  S.lists.morning.forEach(i=>{if(i.water===undefined)i.water=/drink water/i.test(i.t)});return S}
@@ -277,11 +296,70 @@ function renderProgress(){const h=$('heat');h.innerHTML='';const end=new Date(),
  for(const d=new Date(start);d<=end;d.setDate(d.getDate()+1)){const k=dkey(d),sc=dayScore(k),c=document.createElement('div');c.className='cell'+(sc?' l'+sc:'')+(k===today()?' today':'');c.title=`${k}: ${sc}/3${sc===3?' — perfect day!':''}`;h.appendChild(c)}
  const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];$('wiDay').innerHTML=DOW.map((d,i)=>`<option value="${i}" ${i==S.weighin.dow?'selected':''}>${d}s</option>`).join('');
  $('wiTime').value=S.weighin.time;const imp=S.profile?.units==='imperial';$('wiUnit').textContent=imp?'lb':'kg';
- $('wiHist').innerHTML=S.weights.slice().reverse().slice(0,10).map(w=>`<li><span style="flex:1">${w.date}</span><b>${imp?r1(w.kg*2.20462)+' lb':r1(w.kg)+' kg'}</b></li>`).join('')||'<li class="sub">No weigh-ins yet.</li>'}
+ renderWeight();renderMeas()}
 $('wiDay').onchange=e=>{S.weighin.dow=+e.target.value;save();render()};$('wiTime').onchange=e=>{S.weighin.time=e.target.value;save();render()};
-$('wiForm').onsubmit=e=>{e.preventDefault();let v=+$('wiVal').value;if(!v)return;if(S.profile?.units==='imperial')v=lbToKg(v);const t=today();S.weights=S.weights.filter(w=>w.date!==t);S.weights.push({date:t,kg:r1(v)});
- S.weights.sort((a,b)=>a.date.localeCompare(b.date));if(S.profile)S.profile.wkg=r1(v);e.target.reset();save();render()};
+const imperial=()=>S.profile?.units==='imperial',wU=()=>imperial()?'lb':'kg',fromKg=kg=>imperial()?kg*2.20462:kg,toKgU=v=>imperial()?lbToKg(v):v;
+const lenU=()=>imperial()?'in':'cm',fromCm=c=>imperial()?c/2.54:c,toCm=v=>imperial()?v*2.54:v;
+function syncProfileWeight(){const s=sortW(S.weights);if(S.profile&&s.length)S.profile.wkg=r2(s[s.length-1].kg)}
+function renderWeight(){const u=wU(),st=weightStats(S.weights,today()),f=x=>(x>0?'+':x<0?'−':'±')+Math.abs(fromKg(x)).toFixed(1);
+ $('wiUnit').textContent=u;$('goalUnit').textContent=u;if(!$('wiDate').value)$('wiDate').value=today();
+ $('wStats').innerHTML=st?`<div class="stat"><b>${fromKg(st.current).toFixed(1)}</b><span>current ${u}</span></div><div class="stat"><b>${f(st.sinceStart)}</b><span>since start</span></div><div class="stat"><b>${f(st.last30)}</b><span>last 30 days</span></div>`:'<p class="foot" style="grid-column:1/-1">Log your first weight to see trends.</p>';
+ if(document.activeElement!==$('goalW'))$('goalW').value=S.goalKg?r1(fromKg(S.goalKg)):'';
+ const gp=st&&goalProgress(st.start,st.current,S.goalKg);$('goalBar').style.width=(gp??0)*100+'%';
+ $('goalTxt').textContent=gp==null?'Set a goal weight':`${Math.round(gp*100)}% · ${Math.abs(fromKg(st.current-S.goalKg)).toFixed(1)} ${u} to go`;
+ $('wChart').innerHTML=chartSVG();
+ $('wiHist').innerHTML=sortW(S.weights).reverse().map(w=>`<li><span style="flex:1">${w.date}</span><b>${fromKg(w.kg).toFixed(1)} ${u}</b><button class="ghost" data-dw="${w.date}">✕</button></li>`).join('')||'<li class="sub">No entries yet.</li>';
+ $('wiHist').querySelectorAll('[data-dw]').forEach(b=>b.onclick=()=>{if(confirm('Delete weight for '+b.dataset.dw+'?')){S.weights=S.weights.filter(w=>w.date!==b.dataset.dw);syncProfileWeight();save();render()}})}
+function chartSVG(){const s=sortW(S.weights);if(s.length<2)return s.length?'<p class="foot">Add another entry to see the chart.</p>':'';
+ const W=340,H=160,L=34,R=8,Tp=10,B=22,ma=movingAvg(s),vals=s.map(w=>fromKg(w.kg)).concat(S.goalKg?[fromKg(S.goalKg)]:[]);
+ let lo=Math.min(...vals),hi=Math.max(...vals);if(hi-lo<2){lo-=1;hi+=1}const pd=(hi-lo)*.1;lo-=pd;hi+=pd;
+ const d0=dayNum(s[0].date),d1=Math.max(d0+1,dayNum(s[s.length-1].date)),X=d=>L+(dayNum(d)-d0)/(d1-d0)*(W-L-R),Y=v=>Tp+(hi-v)/(hi-lo)*(H-Tp-B);
+ const path=a=>a.map((w,i)=>(i?'L':'M')+X(w.date).toFixed(1)+','+Y(fromKg(w.kg)).toFixed(1)).join('');
+ const ticks=[lo+pd,(lo+hi)/2,hi-pd].map(v=>`<text x="2" y="${Y(v)+3}">${v.toFixed(1)}</text>`).join('');
+ const goal=S.goalKg?`<line class="gl" x1="${L}" x2="${W-R}" y1="${Y(fromKg(S.goalKg))}" y2="${Y(fromKg(S.goalKg))}"/>`:'';
+ return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight chart">${ticks}${goal}<path class="ln" d="${path(s)}"/>${s.map(w=>`<circle class="pt" r="2.5" cx="${X(w.date)}" cy="${Y(fromKg(w.kg))}"/>`).join('')}<path class="ma" d="${path(ma)}"/>
+ <text x="${L}" y="${H-6}">${s[0].date.slice(5)}</text><text x="${W-R}" y="${H-6}" text-anchor="end">${s[s.length-1].date.slice(5)}</text></svg><p class="foot">Grey = entries · <span style="color:var(--accent)">blue = 7-day average</span>${S.goalKg?' · green dashed = goal':''}</p>`}
+$('wiForm').onsubmit=e=>{e.preventDefault();let v=+$('wiVal').value;if(!v)return;const d=$('wiDate').value||today();S.weights=S.weights.filter(w=>w.date!==d);S.weights.push({date:d,kg:r2(toKgU(v))});
+ S.weights=sortW(S.weights);syncProfileWeight();$('wiVal').value='';save();render()};
+$('goalW').onchange=e=>{const v=+e.target.value;S.goalKg=v>0?r2(toKgU(v)):null;save();render()};
+const MS=['waist','chest','hips','arms','thighs','bf'],MSN={waist:'Waist',chest:'Chest',hips:'Hips',arms:'Arms',thighs:'Thighs',bf:'Body fat'};
+const fmtM=(k,v)=>k==='bf'?r1(v)+'%':r1(fromCm(v))+' '+lenU();
+function renderMeas(){if(!$('msDate').value)$('msDate').value=today();document.querySelectorAll('#msForm label').forEach(l=>{const k=l.querySelector('input').dataset.m;l.firstChild.textContent=MSN[k]+(k==='bf'?' %':' ('+lenU()+')')});
+ const s=S.meas.slice().sort((a,b)=>a.date.localeCompare(b.date));
+ $('msDelta').innerHTML=s.length>1?MS.map(k=>{const h=s.filter(m=>m[k]!=null);if(h.length<2)return'';const d=h[h.length-1][k]-h[0][k];return`<span class="chip">${MSN[k]} ${d>0?'+':d<0?'−':'±'}${k==='bf'?r1(Math.abs(d))+'%':r1(Math.abs(fromCm(d)))+' '+lenU()}</span>`}).join(''):'';
+ $('msHist').innerHTML=s.reverse().map(m=>`<li><div style="flex:1"><b>${m.date}</b><div class="sub">${MS.filter(k=>m[k]!=null).map(k=>MSN[k]+' '+fmtM(k,m[k])).join(' · ')}</div></div><button class="ghost" data-dm="${m.date}">✕</button></li>`).join('')||'<li class="sub">No measurements yet.</li>';
+ $('msHist').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{if(confirm('Delete measurements for '+b.dataset.dm+'?')){S.meas=S.meas.filter(m=>m.date!==b.dataset.dm);save();render()}})}
+$('msForm').onsubmit=e=>{e.preventDefault();const d=$('msDate').value||today(),m={date:d};let any=false;
+ document.querySelectorAll('#msForm [data-m]').forEach(i=>{if(i.value!==''){const v=+i.value;m[i.dataset.m]=i.dataset.m==='bf'?v:r2(toCm(v));any=true}});if(!any)return;
+ const prev=S.meas.find(x=>x.date===d);if(prev)Object.assign(prev,m);else S.meas.push(m);document.querySelectorAll('#msForm [data-m]').forEach(i=>i.value='');save();render()};
+// ---- photos (IndexedDB, local only)
+let idbP=null;const idb=()=>idbP??=new Promise((res,rej)=>{const r=indexedDB.open('dailyRoutinePhotos',1);r.onupgradeneeded=()=>{const st=r.result.createObjectStore('photos',{keyPath:'id'});st.createIndex('profile','profile')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const tx=async(mode,fn)=>{const db=await idb();return new Promise((res,rej)=>{const t=db.transaction('photos',mode),st=t.objectStore('photos'),out=fn(st);t.oncomplete=()=>res(out?.result??out);t.onerror=()=>rej(t.error)})};
+async function shrink(file,max=1280){const bmp=await createImageBitmap(file);const k=Math.min(1,max/Math.max(bmp.width,bmp.height)),c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+ c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/jpeg',.85))}
+let photoSel=[],urls=[];
+async function renderPhotos(){const all=(await tx('readonly',st=>st.index('profile').getAll(P.active)))||[];all.sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at);
+ urls.forEach(URL.revokeObjectURL);urls=[];const g=$('gallery');g.innerHTML='';const byId={};
+ all.forEach(ph=>{const u=URL.createObjectURL(ph.blob);urls.push(u);byId[ph.id]={...ph,u};const d=document.createElement('div');d.className='ph'+(photoSel.includes(ph.id)?' sel':'');
+  d.innerHTML=`<img src="${u}" alt="Progress photo ${ph.date}" loading="lazy"><span>${ph.date}</span><button title="Delete">✕</button>`;
+  d.onclick=()=>{photoSel=photoSel.includes(ph.id)?photoSel.filter(x=>x!==ph.id):[...photoSel,ph.id].slice(-2);renderPhotos()};
+  d.querySelector('button').onclick=async ev=>{ev.stopPropagation();if(confirm('Delete photo from '+ph.date+'?')){await tx('readwrite',st=>st.delete(ph.id));photoSel=photoSel.filter(x=>x!==ph.id);renderPhotos()}};g.appendChild(d)});
+ photoSel=photoSel.filter(id=>byId[id]);$('phHint').textContent=all.length?(photoSel.length===2?'Comparing — tap a photo to change.':'Tap two photos to compare side by side.'):'No photos yet.';
+ const sel=photoSel.map(id=>byId[id]).sort((a,b)=>a.date.localeCompare(b.date));
+ $('compare').innerHTML=sel.length===2?sel.map(p=>`<figure><img src="${p.u}" alt=""><figcaption>${p.date}${weightOn(p.date)}</figcaption></figure>`).join('')+`<p class="foot" style="grid-column:1/-1;text-align:center">${dayNum(sel[1].date)-dayNum(sel[0].date)} days apart</p>`:''}
+function weightOn(d){const w=sortW(S.weights).filter(x=>x.date<=d).pop();return w?' · '+fromKg(w.kg).toFixed(1)+' '+wU():''}
+if(!$('phDate').value)$('phDate').value=today();
+$('phFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const blob=await shrink(f);await tx('readwrite',st=>st.put({id:uid()+Date.now(),profile:P.active,date:$('phDate').value||today(),at:Date.now(),blob}));renderPhotos()}catch(err){alert('Could not save photo: '+err.message)}e.target.value=''};
 const weighDue=()=>new Date().getDay()==S.weighin.dow&&nowM()>=hm2m(S.weighin.time)&&!S.weights.some(w=>w.date===today());
+/*PROG-START*/
+const dayNum=d=>Math.round(Date.parse(d+'T00:00:00Z')/864e5);
+function sortW(ws){return ws.slice().sort((a,b)=>a.date.localeCompare(b.date))}
+function movingAvg(ws,days=7){const s=sortW(ws);return s.map(w=>{const n=dayNum(w.date),win=s.filter(x=>{const m=dayNum(x.date);return m<=n&&m>n-days});return{date:w.date,kg:win.reduce((a,x)=>a+x.kg,0)/win.length}})}
+function weightStats(ws,todayStr){const s=sortW(ws);if(!s.length)return null;const first=s[0],last=s[s.length-1],cut=dayNum(todayStr)-30;
+ const base=s.filter(x=>dayNum(x.date)<=cut).pop()||s.find(x=>dayNum(x.date)>=cut);
+ return{start:first.kg,current:last.kg,sinceStart:last.kg-first.kg,last30:base&&base!==last?last.kg-base.kg:0,base30:base,entries:s.length}}
+function goalProgress(start,current,goal){if(!goal||start==null||current==null)return null;const tot=start-goal;if(Math.abs(tot)<1e-9)return 1;return Math.min(1,Math.max(0,(start-current)/tot))}
+/*PROG-END*/
 // ---- profile
 function fillProfile(){const pr=S.profile||{units:'metric',sex:'m',act:2,goal:'maintain'};$('pSwitch').innerHTML=P.list.map(p=>`<option value="${p.id}" ${p.id===P.active?'selected':''}>${esc(p.name)}</option>`).join('');
  $('fName').value=P.list.find(p=>p.id===P.active).name;$('fUnits').value=pr.units;$('fAge').value=pr.age||'';$('fSex').value=pr.sex;$('fAct').value=pr.act;$('fGoal').value=pr.goal;curUnits=pr.units;unitUI(pr)}
@@ -303,7 +381,7 @@ $('pRecalc').onclick=()=>{const pr=readProfile(),e=validProfile(pr);if(e.length)
 $('pSwitch').onchange=e=>{save();P.active=e.target.value;load();save();boot()};
 $('pNew').onclick=()=>{const n=prompt('Name for the new profile?');if(!n)return;save();const id='p'+uid();P.list.push({id,name:n.trim()});P.active=id;S=migrate(seed());save();boot()};
 $('pDel').onclick=()=>{if(P.list.length<2){alert('This is the only profile.');return}const cur=P.list.find(p=>p.id===P.active);if(!confirm('Delete profile "'+cur.name+'" and all its data?'))return;
- localStorage.removeItem(dataKey(cur.id));P.list=P.list.filter(p=>p!==cur);P.active=P.list[0].id;localStorage.setItem(PK,JSON.stringify(P));load();boot()};
+ localStorage.removeItem(dataKey(cur.id));tx('readwrite',st=>{const r=st.index('profile').openCursor(cur.id);r.onsuccess=()=>{const c=r.result;if(c){c.delete();c.continue()}}}).catch(()=>{});P.list=P.list.filter(p=>p!==cur);P.active=P.list[0].id;localStorage.setItem(PK,JSON.stringify(P));load();boot()};
 // ---- header
 const MSG=[[0,'A fresh day — start with one small win. 🌱'],[1,'Nice start! Keep the momentum going. 💪'],[30,'You\'re building something good. Keep going!'],[60,'Over halfway — you\'re crushing it! 🚀'],[85,'Almost there — finish strong! ✨'],[100,'Perfect day! You did everything. 🏆']];
 const MILES=[3,7,14,30,60,100];
@@ -339,7 +417,7 @@ function tick(){rollover();const n=nowHM(),t=today();
  renderSched();renderSummary()}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').then(r=>swReg=r).catch(()=>{});
 navigator.serviceWorker?.addEventListener('message',e=>{if(e.data?.type==='add250')addWater(250,'notif')});
-function boot(){mDate=today();rollover();fillProfile();render();notifBtn();go(S.profile?(S.view&&S.view!=='profile'?S.view:'today'):'profile');
+function boot(){mDate=today();photoSel=[];renderPhotos().catch(()=>{});rollover();fillProfile();render();notifBtn();go(S.profile?(S.view&&S.view!=='profile'?S.view:'today'):'profile');
  if(!S.profile)$('pTitle').textContent='Welcome! Set up your profile';else $('pTitle').textContent='Profile'}
 boot();initDone=true;setInterval(tick,20000);
 const qs=new URLSearchParams(location.search);if(qs.get('add')){addWater(+qs.get('add'),'notif');history.replaceState(null,'',location.pathname)}
