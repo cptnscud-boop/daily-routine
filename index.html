@@ -74,6 +74,14 @@ select{padding:7px;border:1px solid var(--line);border-radius:8px;background:var
 .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}.ph{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:3/4;background:var(--line);cursor:pointer;border:3px solid transparent}.ph.sel{border-color:var(--accent)}
 .ph img{width:100%;height:100%;object-fit:cover}.ph span{position:absolute;left:0;right:0;bottom:0;font-size:.7rem;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65));padding:10px 4px 3px}.ph button{position:absolute;top:2px;right:2px;min-height:28px;min-width:28px;padding:0;background:rgba(0,0,0,.5);color:#fff;border-radius:50%}
 .compare{display:grid;grid-template-columns:1fr 1fr;gap:6px}.compare figure{margin:0}.compare img{width:100%;border-radius:10px}.compare figcaption{font-size:.75rem;color:var(--muted);text-align:center}
+.search{display:flex;gap:6px;margin-top:10px}.search input{flex:1;min-height:46px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font-size:16px}
+.results li{cursor:pointer;gap:10px}.results li:active{background:var(--accent2)}.results .src{font-size:.68rem;padding:2px 7px;border-radius:999px;background:var(--accent2);color:var(--accent);white-space:nowrap}
+.results .src.off{background:#e8f6ee;color:#1a7f4b}.results .src.usda{background:#fff1e0;color:#a35a00}.results .src.mine{background:#f1e8ff;color:#7a3fd1}
+@media(prefers-color-scheme:dark){.results .src.off{background:#173326;color:#5fd69a}.results .src.usda{background:#3a2a12;color:#f0b35a}.results .src.mine{background:#2c2142;color:#c4a2ff}}
+.results .grp{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;min-height:auto;padding:10px 4px 4px;cursor:default;border:0}
+.pick{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px}.pick h3{margin:0 0 2px;font-size:1rem}.pick .mac{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0;text-align:center}.pick .mac div{background:var(--card);border-radius:10px;padding:6px}.pick .mac b{display:block;font-size:1.05rem}
+.scanner{position:fixed;inset:0;background:#000;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}.scanner[hidden]{display:none}.scanner video{width:100%;max-height:70vh;object-fit:cover}
+.scanframe{position:absolute;width:70%;height:22%;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.35)}.scanner p{color:#fff;z-index:1}.scanner button{z-index:1}
 </style></head><body>
 <header data-tab="today" id="hdr"><div class="top"><h1>Today</h1></div><div class="date" id="date"></div>
 <div class="hero"><div class="ring"><svg width="96" height="96"><circle class="bg" cx="48" cy="48" r="40"/><circle class="fg" id="ringFg" cx="48" cy="48" r="40" stroke-dasharray="251.3" stroke-dashoffset="251.3"/></svg><b id="ringPct">0%</b></div>
@@ -96,7 +104,13 @@ select{padding:7px;border:1px solid var(--line);border-radius:8px;background:var
 <section data-tab="food" class="wide"><h2>🍽️ Meals</h2><p class="hint">Log foods, quick-add saved foods, edit targets. History by date below.</p>
 <div class="row"><input type="date" id="mDate" style="padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)"><span class="foot" id="mDateLbl"></span></div>
 <div id="macroBars"></div>
-<div class="foot">Quick-add saved foods:</div><div class="chips" id="saved"></div>
+<div class="search"><input type="search" id="fSearch" placeholder="🔍 Search foods (e.g. egg, greek yogurt)…" autocomplete="off" enterkeyhint="search"><button type="button" class="small chk" id="scanBtn" title="Scan barcode">📷</button></div>
+<div class="row" style="margin-top:6px"><input type="text" id="bcIn" inputmode="numeric" placeholder="Barcode (manual)" style="flex:1"><button type="button" class="small chk" id="bcGo">Look up</button></div>
+<div id="fStatus" class="foot" style="margin-top:6px"></div><div id="fPick" class="pick" hidden></div><ul id="fResults" class="results"></ul>
+<div id="scanner" class="scanner" hidden><video id="scanVid" playsinline muted></video><div class="scanframe"></div><p id="scanMsg">Point the camera at a barcode…</p><button type="button" id="scanClose">Close</button></div>
+<details><summary>Online food search settings</summary><p class="foot" style="margin-top:6px">Sources: Open Food Facts (branded/packaged, barcodes) and USDA FoodData Central (generic foods). The shared <code>DEMO_KEY</code> is rate-limited — get a free personal key at <a href="https://fdc.nal.usda.gov/api-key-signup" target="_blank" rel="noopener">fdc.nal.usda.gov/api-key-signup</a>.</p>
+<div class="row"><input type="text" id="fdcKey" placeholder="USDA API key (blank = DEMO_KEY)" style="flex:1" autocomplete="off"><button type="button" class="small" id="fdcSave">Save key</button></div></details>
+<div class="foot" style="margin-top:8px">Quick-add saved foods:</div><div class="chips" id="saved"></div>
 <form id="mForm"><input type="text" id="mName" placeholder="Food" required><input class="num" id="mK" type="number" step="any" placeholder="kcal" required><input class="num" id="mP" type="number" step="any" placeholder="P g"><input class="num" id="mC" type="number" step="any" placeholder="C g"><input class="num" id="mF" type="number" step="any" placeholder="F g"><label class="foot"><input type="checkbox" id="mSave"> save</label><button>Log</button></form>
 <ul id="meals" style="margin-top:8px"></ul>
 <details><summary>Daily targets</summary><div class="row" style="margin-top:6px" id="targets"></div></details>
@@ -149,7 +163,7 @@ const hm2m=t=>{const[a,b]=t.split(':');return a*60+ +b},nowM=()=>{const d=new Da
 const nowHM=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
 const fmtT=t=>{let[h,m]=t.split(':').map(Number);return(h%12||12)+':'+pad(m)+(h<12?' AM':' PM')};
 // ---- food DB (per 1 portion)
-const F=(n,k,p,c,f,items)=>({id:uid(),n,k,p,c,f,...(items?{items}:{})});
+const F=(n,k,p,c,f,items)=>({id:uid(),n,k,p,c,f,builtin:true,...(items?{items}:{})});
 const seedFoods=()=>[
  F('Butter (1 tsp, 5 g)',36,0,0,4),F('Butter (1 tbsp, 14 g)',102,0.1,0,11.5),
  F('Large egg (50 g)',72,6.3,0.4,4.8),F('Sourdough slice (50 g)',136,5.4,26,1.2),
@@ -164,7 +178,7 @@ const seed=()=>({v:SEED_VERSION,day:today(),tab:'morning',
 function migrate(S){
  S.meals??={};S.water??={};S.foods??=seedFoods();S.over??={};S.mDone??={};S.cel??={};S.weights??=[];S.meas??=[];S.goalKg??=null;
  S.weighin??={dow:1,time:'06:15'};S.wrem??={on:true,from:'06:00',to:'21:00',int:90};S.wremFired??={};
- S.foods.forEach(f=>{if(f.n==='Eggs & Buttered Sourdough Toast'&&f.items?.[0]!=='4 large eggs')Object.assign(f,{k:632,p:36,c:53.6,f:29.6,items:['4 large eggs','2 slices sourdough (100 g)','2 tsp butter (10 g)']})});
+ S.foods.forEach(f=>{if(f.builtin===undefined&&!f.per100)f.builtin=seedFoods().some(x=>x.n===f.n);if(f.n==='Eggs & Buttered Sourdough Toast'&&f.items?.[0]!=='4 large eggs')Object.assign(f,{k:632,p:36,c:53.6,f:29.6,items:['4 large eggs','2 slices sourdough (100 g)','2 tsp butter (10 g)']})});
  S.lists.morning.forEach(i=>{if(i.water===undefined)i.water=/drink water/i.test(i.t)});return S}
 // ---- profiles
 let P;try{P=JSON.parse(localStorage.getItem(PK))}catch(e){}
@@ -260,6 +274,35 @@ function renderHabits(){const ul=$('habits');ul.innerHTML='';const t=today();S.h
  li.children[0].onclick=()=>{h.days=on?h.days.filter(x=>x!==t):[...h.days,t];save();render()};editable(li.querySelector('.t'),()=>h.t,v=>h.t=v);
  li.querySelector('.ghost').onclick=()=>{if(confirm('Remove habit "'+h.t+'"?')){S.habits=S.habits.filter(x=>x!==h);save();render()}};ul.appendChild(li)})}
 $('hForm').onsubmit=e=>{e.preventDefault();const v=$('hIn').value.trim();if(v){S.habits.push({id:uid(),t:v,days:[]});$('hIn').value='';save();render()}};
+/*FOOD-START*/
+const kcalFromKj=kj=>kj/4.184,num=x=>{const n=parseFloat(x);return isFinite(n)?n:null},rd=x=>Math.round(x*10)/10;
+// Open Food Facts product → normalized food (values per 100 g and per serving)
+function normOFF(p){if(!p)return null;const n=p.nutriments||{};const g=k=>num(n[k+'_100g']);
+ let k=g('energy-kcal');if(k==null&&g('energy')!=null)k=kcalFromKj(g('energy'));if(k==null)return null;
+ const per100={k,p:g('proteins')??0,c:g('carbohydrates')??0,f:g('fat')??0};
+ const name=(p.product_name||p.product_name_en||p.generic_name||'').trim();if(!name)return null;
+ const brand=Array.isArray(p.brands)?p.brands.join(', '):(p.brands||'');const sq=num(p.serving_quantity);
+ const servings=[];if(sq&&sq>0)servings.push({label:(p.serving_size||sq+' g').trim(),g:sq});
+ return{src:'off',id:'off:'+(p.code||name),code:p.code||'',name,brand:brand.split(',')[0].trim(),per100,servings}}
+// USDA FDC search hit → normalized food (FDC search values are per 100 g)
+function normFDC(f){if(!f)return null;const by=id=>{const x=(f.foodNutrients||[]).find(n=>n.nutrientId===id||n.nutrientNumber===String(id));return x?num(x.value):null};
+ const kj=(f.foodNutrients||[]).find(n=>n.nutrientId===1062&&/kj/i.test(n.unitName||''));
+ let k=by(1008)??by(2047)??by(2048);if(k==null&&kj)k=kcalFromKj(num(kj.value));if(k==null)return null;
+ const per100={k,p:by(1003)??0,c:by(1005)??by(1050)??0,f:by(1004)??by(1085)??0};const servings=[];
+ if(f.servingSize&&/^(g|grm|ml|mlt)$/i.test(f.servingSizeUnit||''))servings.push({label:(f.householdServingFullText?f.householdServingFullText+' ('+rd(f.servingSize)+' g)':rd(f.servingSize)+' g'),g:+f.servingSize});
+ (f.foodMeasures||[]).forEach(m=>{if(m.gramWeight>0&&servings.length<6){const l=(m.disseminationText||m.modifier||'').trim();if(l&&l!=='Quantity not specified')servings.push({label:l+' ('+rd(m.gramWeight)+' g)',g:m.gramWeight})}});
+ const name=f.description.replace(/\b([A-Z]{2,})\b/g,w=>w[0]+w.slice(1).toLowerCase());
+ return{src:'usda',id:'usda:'+f.fdcId,name,brand:f.brandOwner||f.brandName||'',per100,servings}}
+// amount → macros. unit: 'g' (amount = grams) or a serving index (amount = number of servings)
+function scaleFood(food,unit,amount){const grams=unit==='g'?amount:(food.servings[unit]?.g||0)*amount,m=grams/100,x=food.per100;
+ return{grams,k:Math.round(x.k*m),p:rd(x.p*m),c:rd(x.c*m),f:rd(x.f*m)}}
+const fdcUrl=(q,key)=>`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${encodeURIComponent(key||'DEMO_KEY')}&query=${encodeURIComponent(q)}&pageSize=15&dataType=${encodeURIComponent('Foundation,SR Legacy')}`;
+// FDC /food/{id} detail → serving options from foodPortions
+function fdcPortions(d){return(d?.foodPortions||[]).filter(p=>p.gramWeight>0).map(p=>{const unit=p.measureUnit?.name&&!/undetermined|RACC/i.test(p.measureUnit.name)?p.measureUnit.name:'';
+ const l=[p.amount&&p.amount!==1?rd(p.amount):(unit||p.portionDescription?'1':''),unit,p.portionDescription||p.modifier||''].filter(Boolean).join(' ').trim()||'serving';return{label:l+' ('+rd(p.gramWeight)+' g)',g:p.gramWeight}}).slice(0,8)}
+const fdcFoodUrl=(id,key)=>`https://api.nal.usda.gov/fdc/v1/food/${id}?api_key=${encodeURIComponent(key||'DEMO_KEY')}&format=full`;
+const OFF_FIELDS='code,product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity';
+/*FOOD-END*/
 // ---- meals
 let mDate=today();
 function renderMeals(){$('mDate').value=mDate;$('mDateLbl').textContent=mDate===today()?'Today':'Viewing past day';
@@ -267,7 +310,7 @@ function renderMeals(){$('mDate').value=mDate;$('mDateLbl').textContent=mDate===
  $('macroBars').innerHTML=bar('Calories',t.k,g.kcal,'kcal','var(--accent)')+bar('Protein',t.p,g.p,'g','#22a06b')+bar('Carbs',t.c,g.c,'g','#f59e0b')+bar('Fat',t.f,g.f,'g','#a855f7');
  $('saved').innerHTML='';S.foods.forEach(f=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent='+ '+f.n;
   b.title=`${f.k} kcal · P ${f.p} · C ${f.c} · F ${f.f}${f.items?'\n'+f.items.join(', '):''}\n(right-click / long-press to remove)`;
-  b.onclick=()=>{(S.meals[mDate]??=[]).push({id:uid(),n:f.n,k:f.k,p:f.p,c:f.c,f:f.f});save();render()};
+  b.onclick=()=>{if(f.per100){openPick({...f,name:f.n,brand:'',id:'loc:'+f.id,local:f});return}(S.meals[mDate]??=[]).push({id:uid(),n:f.n,k:f.k,p:f.p,c:f.c,f:f.f});save();render()};
   b.oncontextmenu=e=>{e.preventDefault();if(confirm('Remove saved food "'+f.n+'"?')){S.foods=S.foods.filter(x=>x!==f);save();render()}};$('saved').appendChild(b)});
  const ul=$('meals');ul.innerHTML='';(S.meals[mDate]||[]).forEach(m=>{const li=document.createElement('li');
   li.innerHTML=`<div style="flex:1"><div class="t">${esc(m.n)}</div><div class="sub">${m.k} kcal · P ${r1(m.p)} · C ${r1(m.c)} · F ${r1(m.f)}</div></div><button class="ghost">✕</button>`;
@@ -282,6 +325,77 @@ function renderMeals(){$('mDate').value=mDate;$('mDateLbl').textContent=mDate===
  $('mHist').innerHTML=days.length?days.map(d=>{const x=mealTot(d);return`<li data-d="${d}" style="cursor:pointer"><span style="flex:1">${d}</span><span class="sub">${Math.round(x.k)} kcal · P ${Math.round(x.p)} · C ${Math.round(x.c)} · F ${Math.round(x.f)}</span></li>`}).join(''):'<li class="sub">No history yet.</li>';
  $('mHist').querySelectorAll('[data-d]').forEach(li=>li.onclick=()=>{mDate=li.dataset.d;renderMeals()})}
 $('mDate').onchange=e=>{mDate=e.target.value||today();renderMeals()};
+// ---- online food search
+const FDCK='dailyRoutine.fdcKey',fdcKey=()=>localStorage.getItem(FDCK)||'';
+$('fdcKey').value=fdcKey();$('fdcSave').onclick=()=>{const v=$('fdcKey').value.trim();v?localStorage.setItem(FDCK,v):localStorage.removeItem(FDCK);$('fStatus').textContent=v?'✓ Personal USDA key saved on this device.':'Using DEMO_KEY.';if($('fSearch').value.trim())runSearch($('fSearch').value.trim())};
+const apiCache=new Map();
+const fetchJSON=(url,signal,ms=9000)=>{const hit=apiCache.get(url);if(hit&&Date.now()-hit.t<10*60e3)return Promise.resolve(hit.j);const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);signal?.addEventListener('abort',()=>c.abort());
+ return fetch(url,{signal:c.signal,headers:{Accept:'application/json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(j=>{apiCache.set(url,{t:Date.now(),j});if(apiCache.size>60)apiCache.delete(apiCache.keys().next().value);return j}).finally(()=>clearTimeout(t))};
+async function searchOFF(q,signal){// OFF's text search sometimes returns 503 under load: retry once after a short pause
+ const u=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&fields=${OFF_FIELDS}`;
+ for(let i=0;;i++){try{const j=await fetchJSON(u,signal,12000);return(j.products||[]).map(normOFF).filter(Boolean)}catch(e){if(signal.aborted||i>=1)throw e;await new Promise(r=>setTimeout(r,1500))}}}
+async function searchFDC(q,signal){const j=await fetchJSON(fdcUrl(q,fdcKey()),signal);const rank={Foundation:0,'SR Legacy':1};return(j.foods||[]).sort((a,b)=>(rank[a.dataType]??2)-(rank[b.dataType]??2)).map(normFDC).filter(Boolean)}
+const localFood=f=>f.per100?{...f,src:f.src||'mine',name:f.n,local:f}:{src:f.builtin?'built':'mine',id:'loc:'+f.id,name:f.n,brand:'',local:f,per100:null,servings:[{label:'1 portion',g:0}],fixed:f};
+let sCtl=null,sTimer=null,lastResults={};
+function renderResults(q,groups,status){$('fStatus').textContent=status||'';const ul=$('fResults');ul.innerHTML='';lastResults={};
+ const lbl={built:'Built-in',mine:'My food',off:'Open Food Facts',usda:'USDA'},cls={built:'',mine:'mine',off:'off',usda:'usda'};
+ groups.forEach(([title,items,note])=>{if(!items.length&&!note)return;const h=document.createElement('li');h.className='grp';h.textContent=title+(note?' — '+note:'');ul.appendChild(h);
+  items.slice(0,12).forEach(f=>{lastResults[f.id]=f;const li=document.createElement('li'),x=f.per100,sv=f.servings[0];
+   const sub=f.fixed?`${f.fixed.k} kcal · P ${f.fixed.p} · C ${f.fixed.c} · F ${f.fixed.f} per portion`:`${Math.round(x.k)} kcal/100 g · P ${rd(x.p)} · C ${rd(x.c)} · F ${rd(x.f)}${sv?' · serving '+esc(sv.label):''}`;
+   li.innerHTML=`<div style="flex:1;min-width:0"><div>${esc(f.name)}${f.brand?` <span class="sub">· ${esc(f.brand)}</span>`:''}</div><div class="sub">${sub}</div></div><span class="src ${cls[f.src]}">${lbl[f.src]}</span>`;
+   li.onclick=()=>openPick(f);ul.appendChild(li)})})}
+function runSearch(q){clearTimeout(sTimer);sCtl?.abort();if(q.length<2){renderResults(q,[]);return}
+ const ql=q.toLowerCase().split(/\s+/),local=S.foods.filter(f=>ql.every(w=>f.n.toLowerCase().includes(w))).map(localFood);
+ const groups=[['Saved & built-in',local],['USDA FoodData Central (generic)',[],'…'],['Open Food Facts (branded)',[], '…']];
+ if(!navigator.onLine){groups[1][2]=groups[2][2]='offline';renderResults(q,groups,'📴 Offline — showing saved foods only.');return}
+ renderResults(q,groups,'Searching online…');
+ sTimer=setTimeout(()=>{const ctl=sCtl=new AbortController();let left=2;const done=()=>{if(--left===0&&ctl===sCtl)renderResults(q,groups,groups[1][1].length+groups[2][1].length?'':'No online matches.')};
+  const run=(i,fn)=>fn(q,ctl.signal).then(r=>{groups[i][1]=r;groups[i][2]=r.length?'':'no matches'}).catch(e=>{if(ctl.signal.aborted&&ctl!==sCtl)return;groups[i][2]=/429|HTTP 403/.test(e.message)&&i===1?'rate-limited (add your own key in settings)':'unavailable'}).finally(()=>{if(ctl===sCtl){renderResults(q,groups,'Searching online…');done()}});
+  run(1,searchFDC);run(2,searchOFF)},400)}
+$('fSearch').addEventListener('input',e=>runSearch(e.target.value.trim()));
+// picker
+let pickF=null;
+function openPick(f){pickF=f;
+ if(f.src==='usda'&&!f.local&&!f.portionsTried){f.portionsTried=true;const id=f.id.split(':')[1];fetchJSON(fdcFoodUrl(id,fdcKey())).then(d=>{const ps=fdcPortions(d);if(ps.length){const had=f.servings.length;f.servings=[...f.servings,...ps.filter(p=>!f.servings.some(x=>x.g===p.g))];if(pickF===f&&!had)openPick(f)}}).catch(e=>{if(pickF===f&&/429/.test(e.message))$('fStatus').textContent='USDA rate limit reached — portion sizes unavailable; use grams or add your own API key.'})}const el=$('fPick');el.hidden=false;
+ if(f.fixed){el.innerHTML=`<h3>${esc(f.name)}</h3><div class="sub">${f.src==='built'?'Built-in':'My food'} · fixed portion</div><div class="row" style="margin-top:8px"><span class="foot">Portions</span><input class="num" id="pkAmt" type="number" step="0.25" min="0" value="1"></div><div class="mac" id="pkMac"></div><div class="row"><button type="button" id="pkLog" style="flex:1">Log</button><button type="button" class="ghost" id="pkX">Cancel</button></div>`}
+ else{const opts=f.servings.map((s,i)=>`<option value="${i}">${esc(s.label)}</option>`).join('')+'<option value="g">grams</option>';
+  el.innerHTML=`<h3>${esc(f.name)}</h3><div class="sub">${esc(f.brand||'')}${f.brand?' · ':''}${{off:'Open Food Facts',usda:'USDA FoodData Central',mine:'My food',built:'Built-in'}[f.src]}${f.code?' · '+f.code:''}</div>
+  <div class="row" style="margin-top:8px"><input class="num" id="pkAmt" type="number" step="any" min="0" value="${f.servings.length?1:100}"><select id="pkUnit" style="flex:1;min-width:0">${opts}</select></div>
+  <div class="mac" id="pkMac"></div><div class="row"><button type="button" id="pkLog" style="flex:1">Log</button><button type="button" class="chk" id="pkSave">Log & save</button><button type="button" class="ghost" id="pkX">Cancel</button></div>`;
+  if(!f.servings.length)$('pkUnit').value='g';$('pkUnit').onchange=()=>{$('pkAmt').value=$('pkUnit').value==='g'?(f.servings[0]?.g?rd(f.servings[0].g):100):1;pkCalc()}}
+ $('pkAmt').oninput=pkCalc;$('pkX').onclick=closePick;$('pkLog').onclick=()=>pkLog(false);if($('pkSave'))$('pkSave').onclick=()=>pkLog(true);pkCalc();el.scrollIntoView({block:'nearest',behavior:'smooth'})}
+function pkVals(){const f=pickF,a=+$('pkAmt').value||0;if(f.fixed)return{k:Math.round(f.fixed.k*a),p:rd(f.fixed.p*a),c:rd(f.fixed.c*a),f:rd(f.fixed.f*a),label:a===1?'':` ×${a}`};
+ const u=$('pkUnit').value,r=scaleFood(f,u==='g'?'g':+u,a);return{...r,label:u==='g'?` (${rd(a)} g)`:` (${a} × ${f.servings[+u].label})`}}
+function pkCalc(){const v=pkVals();$('pkMac').innerHTML=`<div><b>${v.k}</b><span class="sub">kcal</span></div><div><b>${v.p}</b><span class="sub">P g</span></div><div><b>${v.c}</b><span class="sub">C g</span></div><div><b>${v.f}</b><span class="sub">F g</span></div>`}
+function closePick(){$('fPick').hidden=true;pickF=null}
+function pkLog(saveIt){const f=pickF,v=pkVals();(S.meals[mDate]??=[]).push({id:uid(),n:f.name+(f.brand&&!f.fixed?' · '+f.brand:'')+v.label,k:v.k,p:v.p,c:v.c,f:v.f,src:f.src});
+ if(saveIt&&!f.local&&!S.foods.some(x=>x.ref===f.id)){const s0=f.servings[0];const g=s0?.g||100;const r=scaleFood(f,'g',g);
+  S.foods.push({id:uid(),n:f.name+(f.brand?' · '+f.brand:''),k:r.k,p:r.p,c:r.c,f:r.f,per100:f.per100,servings:f.servings,src:f.src,brand:'',code:f.code||'',ref:f.id})}
+ closePick();save();render();$('fStatus').textContent='✓ Logged '+f.name+(saveIt?' and saved to your foods (works offline).':'.')}
+// barcode
+async function lookupBarcode(code){code=String(code).replace(/\D/g,'');if(code.length<6){$('fStatus').textContent='Enter a valid barcode.';return}
+ const mine=S.foods.find(f=>f.code===code);if(mine){openPick(localFood(mine));$('fStatus').textContent='Found in your saved foods.';return}
+ if(!navigator.onLine){$('fStatus').textContent='📴 Offline — barcode lookup needs a connection (saved foods work offline).';return}
+ $('fStatus').textContent='Looking up '+code+'…';
+ try{const j=await fetchJSON(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`);const f=j.status===1||j.product?normOFF({...j.product,code}):null;
+  if(!f){$('fStatus').textContent='No nutrition data for '+code+' on Open Food Facts. Add it manually below.';$('mName').focus();return}
+  $('fStatus').textContent='Open Food Facts · barcode '+code;renderResults('',[['Barcode result',[f]]],'Open Food Facts · barcode '+code);openPick(f)}
+ catch(e){$('fStatus').textContent='Barcode lookup failed ('+e.message+'). Check your connection and try again.'}}
+$('bcGo').onclick=()=>lookupBarcode($('bcIn').value);$('bcIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();lookupBarcode($('bcIn').value)}};
+let scanStream=null,scanStop=null;
+function loadZXing(){return window.ZXingBrowser?Promise.resolve(window.ZXingBrowser):new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js';sc.onload=()=>res(window.ZXingBrowser);sc.onerror=()=>rej(new Error('Could not load scanner library'));document.head.appendChild(sc)})}
+async function startScan(){const box=$('scanner'),vid=$('scanVid');box.hidden=false;$('scanMsg').textContent='Point the camera at a barcode…';
+ const found=code=>{stopScan();$('bcIn').value=code;lookupBarcode(code)};
+ try{if('BarcodeDetector' in window&&(await BarcodeDetector.getSupportedFormats()).some(f=>/ean|upc/.test(f))){
+   scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});vid.srcObject=scanStream;await vid.play();
+   const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']});let live=true;scanStop=()=>live=false;
+   const loop=async()=>{if(!live)return;try{const r=await det.detect(vid);if(r[0]){found(r[0].rawValue);return}}catch(e){}requestAnimationFrame(loop)};loop()}
+  else{$('scanMsg').textContent='Loading scanner…';const Z=await loadZXing();$('scanMsg').textContent='Point the camera at a barcode…';
+   const reader=new Z.BrowserMultiFormatReader();const ctrl=await reader.decodeFromVideoDevice(undefined,vid,(res)=>{if(res)found(res.getText())});scanStop=()=>ctrl.stop()}}
+ catch(e){$('scanMsg').textContent=(e.name==='NotAllowedError'?'Camera permission denied.':'Camera unavailable: '+e.message)+' You can type the barcode instead.'}}
+function stopScan(){scanStop?.();scanStop=null;scanStream?.getTracks().forEach(t=>t.stop());scanStream=null;$('scanVid').srcObject=null;$('scanner').hidden=true}
+$('scanBtn').onclick=startScan;$('scanClose').onclick=stopScan;
+addEventListener('online',()=>{if($('fSearch').value.trim())runSearch($('fSearch').value.trim())});
 $('mForm').onsubmit=e=>{e.preventDefault();const m={id:uid(),n:$('mName').value.trim(),k:+$('mK').value||0,p:+$('mP').value||0,c:+$('mC').value||0,f:+$('mF').value||0};if(!m.n)return;
  (S.meals[mDate]??=[]).push(m);if($('mSave').checked)S.foods.push({...m,id:uid()});e.target.reset();save();render()};
 // ---- schedule

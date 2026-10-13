@@ -1,0 +1,21 @@
+// Run: node tests/food.test.js — normalizers tested against real API responses saved in tests/fixtures
+const fs=require('fs'),assert=require('assert'),fx=n=>JSON.parse(fs.readFileSync(__dirname+'/fixtures/'+n));
+const html=fs.readFileSync(__dirname+'/../index.html','utf8');
+const M=new Function(html.slice(html.indexOf('/*FOOD-START*/'),html.indexOf('/*FOOD-END*/'))+';return{normOFF,normFDC,scaleFood,fdcPortions,fdcUrl}')();
+let fail=0;const t=(n,f)=>{try{f();console.log('PASS',n)}catch(e){fail++;console.log('FAIL',n,e.message)}};
+const near=(a,b,tol,m)=>assert(Math.abs(a-b)<=tol,`${m}: ${a} vs ${b}`);
+t('OFF barcode 3017620422003 (Nutella) per 100 g',()=>{const f=M.normOFF({...fx('off-nutella.json').product,code:'3017620422003'});
+ assert.strictEqual(f.src,'off');assert.match(f.name,/Nutella/);near(f.per100.k,539,1,'kcal');near(f.per100.p,6.3,.1,'P');near(f.per100.c,57.5,.1,'C');near(f.per100.f,30.9,.1,'F');
+ const r=M.scaleFood(f,'g',15);near(r.k,81,1,'15 g kcal');near(r.f,4.6,.1,'15 g fat');console.log('     ',JSON.stringify(f.per100),'servings:',JSON.stringify(f.servings),'15 g →',JSON.stringify(r))});
+t('OFF search "greek yogurt" normalizes hits with serving sizes',()=>{const hits=fx('off-search-greek-yogurt.json').hits.map(M.normOFF).filter(Boolean);assert(hits.length>=3,'hits');
+ hits.forEach(h=>{assert(h.per100.k>=0&&h.per100.k<900);assert(h.name)});const s=hits.find(h=>h.servings.length);
+ if(s){const r=M.scaleFood(s,0,1);near(r.k,s.per100.k*s.servings[0].g/100,1,'1 serving')}hits.slice(0,3).forEach(h=>console.log('     ',h.name,'·',h.brand,JSON.stringify(h.per100),JSON.stringify(h.servings)))});
+t('OFF kJ-only product converts to kcal; missing energy → null',()=>{near(M.normOFF({product_name:'X',nutriments:{energy_100g:418.4}}).per100.k,100,.01,'kJ');assert.strictEqual(M.normOFF({product_name:'X',nutriments:{}}),null);assert.strictEqual(M.normOFF({nutriments:{'energy-kcal_100g':5}}),null)});
+t('USDA "egg" search: whole large egg per 100 g + portions from detail',()=>{const foods=fx('fdc-egg.json').foods.map(M.normFDC).filter(Boolean);const e=foods.find(f=>/egg whole/i.test(f.name));assert(e,'egg whole');
+ near(e.per100.k,148,1,'kcal');near(e.per100.p,12.4,0.6,'P');assert(e.per100.f>8&&e.per100.f<11,'F '+e.per100.f);
+ const ps=M.fdcPortions(fx('fdc-food-748967.json'));assert(ps.some(p=>Math.abs(p.g-50.3)<.01),'1 egg 50.3 g');e.servings=ps;
+ const r=M.scaleFood(e,0,2);near(r.grams,100.6,.01,'2 eggs grams');near(r.k,149,1,'2 eggs kcal');console.log('     ',e.name,JSON.stringify(e.per100),'portions',JSON.stringify(ps),'2 eggs →',JSON.stringify(r))});
+t('USDA branded-style serving (GRM) parsed',()=>{const f=M.normFDC({fdcId:1,description:'TEST BAR',dataType:'Branded',servingSize:40,servingSizeUnit:'GRM',householdServingFullText:'1 bar',foodNutrients:[{nutrientId:1008,value:400},{nutrientId:1003,value:20},{nutrientId:1005,value:50},{nutrientId:1004,value:10}]});
+ assert.strictEqual(f.servings[0].g,40);assert.strictEqual(f.name,'Test Bar');const r=M.scaleFood(f,0,1);assert.deepStrictEqual([r.k,r.p,r.c,r.f],[160,8,20,4])});
+t('USDA url uses DEMO_KEY by default and personal key when set',()=>{assert.match(M.fdcUrl('egg'),/api_key=DEMO_KEY/);assert.match(M.fdcUrl('egg','abc123'),/api_key=abc123/);assert.match(M.fdcUrl('greek yogurt'),/query=greek%20yogurt/)});
+console.log(fail?fail+' FAILED':'ALL PASS');process.exit(fail?1:0);
